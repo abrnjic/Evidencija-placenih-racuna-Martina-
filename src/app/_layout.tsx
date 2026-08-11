@@ -22,32 +22,38 @@ export default function TabLayout() {
 
   useEffect(() => {
     async function setupNotifications() {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      if (finalStatus !== 'granted') {
-        return; // permission denied
-      }
+      try {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        if (finalStatus !== 'granted') {
+          return; // permission denied
+        }
 
-      // Schedule monthly reminder
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Vrijeme je za račune! 📅",
-          body: "Jeste li poplaćali i unijeli sve račune za ovaj mjesec?",
-          sound: true,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-          day: 20,
-          hour: 10,
-          minute: 0,
-          repeats: true,
-        },
-      });
+        // Schedule monthly reminder
+        await Notifications.cancelAllScheduledNotificationsAsync();
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Vrijeme je za račune! 📅",
+            body: "Jeste li poplaćali i unijeli sve račune za ovaj mjesec?",
+            sound: true,
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+            day: 20,
+            hour: 10,
+            minute: 0,
+            repeats: true,
+          },
+        });
+      } catch (e) {
+        console.warn('Notification setup failed:', e);
+      } finally {
+        await SplashScreen.hideAsync();
+      }
     }
 
     setupNotifications();
