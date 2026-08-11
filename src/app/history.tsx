@@ -8,6 +8,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 export default function HistoryScreen() {
   const [bills, setBills] = useState<Bill[]>([]);
@@ -35,6 +37,63 @@ export default function HistoryScreen() {
       loadBills();
     }, [])
   );
+
+  const handleExportPDF = async () => {
+    if (bills.length === 0) {
+      Alert.alert('Nema podataka', 'Nemate evidentiranih računa za izvoz.');
+      return;
+    }
+
+    try {
+      let total = 0;
+      let rows = '';
+      
+      bills.forEach(b => {
+        total += b.amount;
+        rows += `
+          <tr>
+            <td>${format(new Date(b.datePaid), 'dd.MM.yyyy')}</td>
+            <td>${b.category}</td>
+            <td>${b.amount.toFixed(2)} €</td>
+            <td>${b.note || ''}</td>
+          </tr>
+        `;
+      });
+
+      const html = `
+        <html>
+          <head>
+            <style>
+              body { font-family: Helvetica, sans-serif; padding: 20px; }
+              h1 { color: #208AEF; text-align: center; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              .total { text-align: right; font-size: 18px; font-weight: bold; margin-top: 20px; }
+            </style>
+          </head>
+          <body>
+            <h1>Izvještaj o plaćenim računima</h1>
+            <table>
+              <tr>
+                <th>Datum</th>
+                <th>Kategorija</th>
+                <th>Iznos</th>
+                <th>Napomena</th>
+              </tr>
+              ${rows}
+            </table>
+            <div class="total">Ukupno plaćeno: ${total.toFixed(2)} €</div>
+          </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+    } catch (error) {
+      Alert.alert('Greška', 'Došlo je do pogreške pri generiranju PDF-a.');
+    }
+  };
 
   const handleDelete = (id: string | undefined) => {
     if (!id) return;
@@ -94,6 +153,14 @@ export default function HistoryScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.screenHeader}>
+        <Text style={styles.screenTitle}>Povijest računa</Text>
+        <TouchableOpacity style={styles.exportButton} onPress={handleExportPDF}>
+          <MaterialIcons name="picture-as-pdf" size={24} color="#fff" />
+          <Text style={styles.exportButtonText}>Izvezi</Text>
+        </TouchableOpacity>
+      </View>
+
       {loading ? (
         <ActivityIndicator size="large" color="#208AEF" style={styles.loader} />
       ) : bills.length === 0 ? (
@@ -117,6 +184,32 @@ const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  screenHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  screenTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  exportButton: {
+    backgroundColor: '#FF3B30',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  exportButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginLeft: 4,
   },
   loader: {
     flex: 1,

@@ -32,34 +32,38 @@ export default function ScanScreen() {
     );
   }
 
-  // Parses HUB3 barcode string to extract the amount
   const parseHUB3 = (data: string) => {
     try {
-      const lines = data.split('\n');
-      
-      // Basic validation for HUB3 format (sometimes it might not have newline but Carriage Return)
-      // We also handle cases where \r\n is used
       const parsedLines = data.split(/\r?\n/);
       
       if (parsedLines[0] !== 'HRVHUB30') {
         return null;
       }
       
-      // Amount is usually on the 3rd line (index 2)
-      // Format is zero padded, e.g., '00000000015024' -> 150.24
       const amountLine = parsedLines[2];
-      
       if (!amountLine || amountLine.length === 0) {
         return null;
       }
       
-      // Convert to number and divide by 100
       const amountNum = parseInt(amountLine, 10);
       if (isNaN(amountNum)) {
         return null;
       }
       
-      return (amountNum / 100).toFixed(2);
+      const amount = (amountNum / 100).toFixed(2);
+      
+      // Index 6 is the Recipient Name (Ime primatelja)
+      const recipientName = parsedLines[6] ? parsedLines[6].toUpperCase() : '';
+      let category = null;
+      
+      if (recipientName.includes('HEP') || recipientName.includes('ELEKTRA')) category = 'Struja';
+      else if (recipientName.includes('VODOOPSKRBA') || recipientName.includes('VODOVOD')) category = 'Voda';
+      else if (recipientName.includes('PLIN') || recipientName.includes('GRADSKA PLINARA')) category = 'Plin';
+      else if (recipientName.includes('ČISTOĆA') || recipientName.includes('CISTOCA') || recipientName.includes('SMEĆE')) category = 'Smeće';
+      else if (recipientName.includes('GSKG') || recipientName.includes('UPRAVITELJ') || recipientName.includes('PRIČUVA') || recipientName.includes('PRICUVA')) category = 'Pričuva';
+      else if (recipientName.includes('HT') || recipientName.includes('TELEKOM') || recipientName.includes('ISKON') || recipientName.includes('A1') || recipientName.includes('TELEMACH')) category = 'Mobitel'; // or Internet/TV, but we can't be sure
+
+      return { amount, category };
     } catch (error) {
       console.error('Error parsing HUB3:', error);
       return null;
@@ -70,13 +74,15 @@ export default function ScanScreen() {
     if (scanned) return;
     setScanned(true);
 
-    const amount = parseHUB3(data);
+    const result = parseHUB3(data);
 
-    if (amount) {
-      // Successfully extracted amount, return to add screen with the amount parameter
+    if (result) {
       router.replace({
         pathname: '/add',
-        params: { scannedAmount: amount }
+        params: { 
+          scannedAmount: result.amount,
+          scannedCategory: result.category || ''
+        }
       });
     } else {
       Alert.alert(

@@ -16,7 +16,7 @@ export default function AddBillScreen() {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { scannedAmount } = useLocalSearchParams();
+  const { scannedAmount, scannedCategory } = useLocalSearchParams();
   
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
@@ -27,7 +27,10 @@ export default function AddBillScreen() {
     if (scannedAmount && typeof scannedAmount === 'string') {
       setAmount(scannedAmount);
     }
-  }, [scannedAmount]);
+    if (scannedCategory && typeof scannedCategory === 'string' && CATEGORIES.includes(scannedCategory as Category)) {
+      setCategory(scannedCategory as Category);
+    }
+  }, [scannedAmount, scannedCategory]);
 
   const handleSave = async () => {
     if (!amount || isNaN(Number(amount))) {
