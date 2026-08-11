@@ -7,11 +7,12 @@ import { hr } from 'date-fns/locale';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 export default function HistoryScreen() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
@@ -72,9 +73,17 @@ export default function HistoryScreen() {
       
       <View style={styles.cardBody}>
         <Text style={styles.amountText}>{item.amount.toFixed(2)} €</Text>
-        <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
-          <MaterialIcons name="delete-outline" size={24} color="#FF3B30" />
-        </TouchableOpacity>
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity 
+            onPress={() => router.push(`/edit/${item.id}`)} 
+            style={styles.actionButton}
+          >
+            <MaterialIcons name="edit" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.actionButton}>
+            <MaterialIcons name="delete-outline" size={24} color="#FF3B30" />
+          </TouchableOpacity>
+        </View>
       </View>
       
       {item.note ? (
@@ -171,8 +180,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: 'bold',
     color: colors.text,
   },
-  deleteButton: {
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionButton: {
     padding: 8,
+    marginLeft: 8,
   },
   noteText: {
     marginTop: 12,

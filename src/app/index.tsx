@@ -1,15 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { getBills } from '../services/billService';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { getBills, addBill } from '../services/billService';
 import { Bill } from '../types';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function DashboardScreen() {
   const [totalThisMonth, setTotalThisMonth] = useState(0);
   const [totalLastMonth, setTotalLastMonth] = useState(0);
+  const [lastMonthBills, setLastMonthBills] = useState<Bill[]>([]);
+  const [thisMonthBillsCount, setThisMonthBillsCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [duplicating, setDuplicating] = useState(false);
+  const router = useRouter();
 
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
@@ -31,18 +36,24 @@ export default function DashboardScreen() {
 
       let currentTotal = 0;
       let lastTotal = 0;
+      let currentMonthCount = 0;
+      const lastMonthBillsArray: Bill[] = [];
 
       bills.forEach(bill => {
         const billDate = new Date(bill.datePaid);
         if (billDate.getMonth() === currentMonth && billDate.getFullYear() === currentYear) {
           currentTotal += bill.amount;
+          currentMonthCount++;
         } else if (billDate.getMonth() === lastMonth && billDate.getFullYear() === lastMonthYear) {
           lastTotal += bill.amount;
+          lastMonthBillsArray.push(bill);
         }
       });
 
       setTotalThisMonth(currentTotal);
       setTotalLastMonth(lastTotal);
+      setLastMonthBills(lastMonthBillsArray);
+      setThisMonthBillsCount(currentMonthCount);
     } catch (error) {
       console.error(error);
     } finally {
@@ -55,6 +66,50 @@ export default function DashboardScreen() {
       calculateTotals();
     }, [])
   );
+
+  const handleDuplicate = () => {
+    if (lastMonthBills.length === 0) {
+      Alert.alert('Nema računa', 'Prošli mjesec nemate plaćenih računa za kopiranje.');
+      return;
+    }
+    
+    if (thisMonthBillsCount > 0) {
+      Alert.alert(
+        'Upozorenje',
+        'Već imate unesene račune za ovaj mjesec. Želite li svejedno iskopirati prošlomjesečne račune i potencijalno ih duplicirati?',
+        [
+          { text: 'Odustani', style: 'cancel' },
+          { text: 'Kopiraj svejedno', onPress: performDuplication }
+        ]
+      );
+    } else {
+      performDuplication();
+    }
+  };
+
+  const performDuplication = async () => {
+    setDuplicating(true);
+    try {
+      const now = new Date();
+      // Generate promises to add each bill
+      const addPromises = lastMonthBills.map(bill => {
+        return addBill({
+          category: bill.category,
+          amount: bill.amount, // copy exact amount, user can edit later
+          datePaid: now.toISOString(),
+          note: bill.note ? `(Kopirano) ${bill.note}` : '(Kopirano)'
+        });
+      });
+      
+      await Promise.all(addPromises);
+      Alert.alert('Uspješno!', `Iskopirano je ${lastMonthBills.length} računa u ovaj mjesec. Možete ih izmijeniti u Povijesti.`);
+      await calculateTotals(); // refresh
+    } catch (error) {
+      Alert.alert('Greška', 'Došlo je do problema pri kopiranju.');
+    } finally {
+      setDuplicating(false);
+    }
+  };
 
   const difference = totalThisMonth - totalLastMonth;
   const isHigher = difference > 0;
@@ -83,6 +138,26 @@ export default function DashboardScreen() {
               <Text style={styles.statLabel}>Prošli mjesec</Text>
               <Text style={styles.statAmount}>{totalLastMonth.toFixed(2)} €</Text>
             </View>
+          </View>
+          
+          <View style={styles.actionsSection}>
+            <TouchableOpacity 
+              style={styles.duplicateButton}
+              onPress={handleDuplicate}
+              disabled={duplicating}
+            >
+              {duplicating ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <MaterialIcons name="content-copy" size={24} color="#fff" style={{marginRight: 8}} />
+                  <Text style={styles.duplicateButtonText}>Kopiraj prošli mjesec</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <Text style={styles.hintText}>
+              Brzo kopirajte sve račune iz prošlog mjeseca, a zatim u Povijesti izmijenite samo iznose računa koji variraju (npr. struja).
+            </Text>
           </View>
         </View>
       )}
@@ -169,4 +244,37 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
+  actionsSection: {
+    marginTop: 40,
+    alignItems: 'center',
+  },
+  duplicateButton: {
+    backgroundColor: '#34C759', // Green color
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    width: '100%',
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  duplicateButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  hintText: {
+    color: colors.text,
+    opacity: 0.6,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 18,
+    paddingHorizontal: 10,
+  }
 });

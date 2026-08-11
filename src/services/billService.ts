@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Bill } from '../types';
 
@@ -47,6 +47,19 @@ export const updateBill = async (id: string, updatedData: Partial<Bill>) => {
     await updateDoc(billRef, updatedData);
   } catch (error) {
     console.error("Error updating bill: ", error);
+    throw error;
+  }
+};
+
+export const getBillById = async (id: string): Promise<Bill | null> => {
+  try {
+    const docSnap = await getDoc(doc(db, BILLS_COLLECTION, id));
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as Bill;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting bill by id: ", error);
     throw error;
   }
 };
