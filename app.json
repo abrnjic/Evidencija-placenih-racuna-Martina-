@@ -33,7 +33,12 @@
           "imageWidth": 76
         }
       ],
-      "expo-barcode-scanner",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Evidencija Računa to access your camera."
+        }
+      ],
       "expo-sharing"
     ],
     "experiments": {
