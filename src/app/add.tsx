@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { addBill } from '../services/billService';
 import { Category } from '../types';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const CATEGORIES: Category[] = ['Struja', 'Voda', 'Plin', 'Smeće', 'Pričuva', 'Internet/TV', 'Mobitel', 'Ostalo'];
 
@@ -15,11 +16,18 @@ export default function AddBillScreen() {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { scannedAmount } = useLocalSearchParams();
   
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
   
   const styles = createStyles(colors);
+
+  useEffect(() => {
+    if (scannedAmount && typeof scannedAmount === 'string') {
+      setAmount(scannedAmount);
+    }
+  }, [scannedAmount]);
 
   const handleSave = async () => {
     if (!amount || isNaN(Number(amount))) {
@@ -61,14 +69,22 @@ export default function AddBillScreen() {
       </View>
 
       <Text style={styles.label}>Iznos (€)</Text>
-      <TextInput
-        style={styles.input}
-        value={amount}
-        onChangeText={setAmount}
-        keyboardType="numeric"
-        placeholder="Npr. 45.50"
-        placeholderTextColor={colors.icon}
-      />
+      <View style={styles.amountContainer}>
+        <TextInput
+          style={[styles.input, styles.amountInput]}
+          value={amount}
+          onChangeText={setAmount}
+          keyboardType="numeric"
+          placeholder="Npr. 45.50"
+          placeholderTextColor={colors.icon}
+        />
+        <TouchableOpacity 
+          style={styles.scanButton}
+          onPress={() => router.push('/scan')}
+        >
+          <MaterialIcons name="qr-code-scanner" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
       <Text style={styles.label}>Napomena (opcionalno)</Text>
       <TextInput
@@ -117,6 +133,27 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.text,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
+  },
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  amountInput: {
+    flex: 1,
+  },
+  scanButton: {
+    backgroundColor: '#34C759',
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   textArea: {
     minHeight: 100,

@@ -8,6 +8,8 @@
     "@react-native-picker/picker": "2.11.4",
     "date-fns": "^4.4.0",
     "expo": "~57.0.12",
+    "expo-barcode-scanner": "^13.0.1",
+    "expo-camera": "~57.0.3",
     "expo-constants": "~57.0.10",
     "expo-device": "~57.0.1",
     "expo-font": "~57.0.1",
