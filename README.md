@@ -1,56 +1,60 @@
-# Welcome to your Expo app 👋
+<p align="center">
+  <img src="https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React Native" />
+  <img src="https://img.shields.io/badge/Expo-1B1F23?style=for-the-badge&logo=expo&logoColor=white" alt="Expo" />
+  <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />
+</p>
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# Evidencija Plaćenih Računa (Režije Tracker) 📝💶
 
-## Get started
+**Evidencija Plaćenih Računa** je moderna mobilna aplikacija (Android / iOS) namijenjena jednostavnom praćenju mjesečnih režija i troškova. Razvijena je pomoću **React Native (Expo)** okvira i koristi **Firebase Cloud Firestore** za besprijekornu i sigurnu sinkronizaciju podataka u oblaku.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## 🌟 Ključne Značajke
 
-2. Start the app
+*   **Nadzorna Ploča (Dashboard):** Trenutni uvid u potrošnju ovog i prošlog mjeseca, uz izravnu usporedbu.
+*   **Povijest Računa:** Pregledan i moderan popis svih plaćenih računa s informacijama o datumu, iznosu, i bilješkama.
+*   **Jednostavan Unos:** Brzo dodavanje novog računa s padajućim izbornikom za kategorije (Struja, Voda, Plin...).
+*   **Cloud Sinkronizacija:** Baza podataka na Firebaseu osigurava da nikada ne izgubite svoje zapise, čak ni pri promjeni uređaja.
+*   **Sigurnost i Moderan Dizajn:** Elegantno korisničko sučelje prilagođeno tamnim i svijetlim temama na mobilnim uređajima.
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## 🚀 Instalacija i Pokretanje (Lokalni Razvoj)
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Za pokretanje ovog projekta na svom računalu, pratite sljedeće korake:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### 1. Preduvjeti
+*   Instaliran [Node.js](https://nodejs.org/) (i `npm` paketi).
+*   Mobitel s instaliranom **Expo Go** aplikacijom ([Android](https://play.google.com/store/apps/details?id=host.exp.exponent) / [iOS](https://apps.apple.com/us/app/expo-go/id982107779)).
 
-## Get a fresh project
-
-When you're ready, run:
-
+### 2. Kloniranje i Postavljanje
 ```bash
-npm run reset-project
+git clone https://github.com/abrnjic/Evidencija-placenih-racuna-Martina-.git
+cd Evidencija-placenih-racuna-Martina-
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 3. Konfiguracija Firebase Baze
+Otvorite datoteku `src/firebaseConfig.ts` i osigurajte da je unesena ispravna konfiguracija vašeg Firebase Web projekta.
 
-### Other setup steps
+### 4. Pokretanje Aplikacije
+```bash
+npm run start
+```
+*Nakon što se prikaže QR kod, skenirajte ga Expo Go aplikacijom na Vašem uređaju.*
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+---
 
-## Learn more
+## 📦 Preuzimanje APK Aplikacije
 
-To learn more about developing your project with Expo, look at the following resources:
+Završnu verziju Android aplikacije (`.apk` datoteka) namijenjenu direktnoj instalaciji moći ćete pronaći u sekciji **[Releases](https://github.com/abrnjic/Evidencija-placenih-racuna-Martina-/releases)** s desne strane ovog repozitorija kada aplikacija bude u potpunosti izgrađena putem Cloud servera.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+---
 
-## Join the community
+## 🛠️ Arhitektura & Tehnologije
+*   **Frontend:** React Native, Expo SDK 57, Expo Router, Expo Vector Icons
+*   **Backend / DB:** Firebase JS SDK, Cloud Firestore
+*   **Alati:** Date-fns (za formatiranje datuma), React Native Picker
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+*Napravljeno s ljubavlju za brzu i jednostavnu kontrolu Vaših financija.* ❤️

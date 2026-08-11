@@ -1,98 +1,172 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { getBills } from '../services/billService';
+import { Bill } from '../types';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+export default function DashboardScreen() {
+  const [totalThisMonth, setTotalThisMonth] = useState(0);
+  const [totalLastMonth, setTotalLastMonth] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+  const scheme = useColorScheme();
+  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const styles = createStyles(colors);
+
+  const calculateTotals = async () => {
+    try {
+      setLoading(true);
+      const bills = await getBills();
+      
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      const lastMonthDate = new Date(now);
+      lastMonthDate.setMonth(currentMonth - 1);
+      const lastMonth = lastMonthDate.getMonth();
+      const lastMonthYear = lastMonthDate.getFullYear();
+
+      let currentTotal = 0;
+      let lastTotal = 0;
+
+      bills.forEach(bill => {
+        const billDate = new Date(bill.datePaid);
+        if (billDate.getMonth() === currentMonth && billDate.getFullYear() === currentYear) {
+          currentTotal += bill.amount;
+        } else if (billDate.getMonth() === lastMonth && billDate.getFullYear() === lastMonthYear) {
+          lastTotal += bill.amount;
+        }
+      });
+
+      setTotalThisMonth(currentTotal);
+      setTotalLastMonth(lastTotal);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      calculateTotals();
+    }, [])
+  );
+
+  const difference = totalThisMonth - totalLastMonth;
+  const isHigher = difference > 0;
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <View style={styles.container}>
+      {loading ? (
+        <ActivityIndicator size="large" color="#208AEF" style={styles.loader} />
+      ) : (
+        <View style={styles.content}>
+          <Text style={styles.headerTitle}>Pregled troškova</Text>
+          
+          <View style={styles.mainCard}>
+            <Text style={styles.cardLabel}>Ovaj mjesec</Text>
+            <Text style={styles.totalAmount}>{totalThisMonth.toFixed(2)} €</Text>
+            
+            <View style={styles.comparisonContainer}>
+              <Text style={styles.comparisonText}>
+                {Math.abs(difference).toFixed(2)} € {isHigher ? 'više' : 'manje'} nego prošli mjesec
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.statsContainer}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Prošli mjesec</Text>
+              <Text style={styles.statAmount}>{totalLastMonth.toFixed(2)} €</Text>
+            </View>
+          </View>
+        </View>
+      )}
+    </View>
   );
 }
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
-}
-
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  loader: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    padding: 20,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 20,
+  },
+  mainCard: {
+    backgroundColor: '#208AEF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#208AEF',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  cardLabel: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  totalAmount: {
+    color: '#ffffff',
+    fontSize: 48,
+    fontWeight: 'bold',
+  },
+  comparisonContainer: {
+    marginTop: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  comparisonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statsContainer: {
+    marginTop: 24,
     flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  safeArea: {
+  statCard: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    backgroundColor: colors.backgroundElement,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+  statLabel: {
+    color: colors.text,
+    opacity: 0.6,
+    fontSize: 14,
+    marginBottom: 8,
   },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  statAmount: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: 'bold',
   },
 });
