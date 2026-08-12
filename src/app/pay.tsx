@@ -4,9 +4,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getBillById, updateBill } from '../services/billService';
 import { Bill } from '../types';
-import Colors from '../constants/Colors';
+import { Colors } from '../constants/theme';
 import * as Clipboard from 'expo-clipboard';
-import { useGooglePay, GooglePayButton } from '@stripe/stripe-react-native';
+import { usePlatformPay, PlatformPayButton, PlatformPay } from '@stripe/stripe-react-native';
 
 export default function PayScreen() {
   const { id } = useLocalSearchParams();
@@ -18,7 +18,7 @@ export default function PayScreen() {
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
   const styles = createStyles(colors);
 
-  const { isGooglePaySupported, initGooglePay, createGooglePayPaymentMethod } = useGooglePay();
+  const { isPlatformPaySupported, createPlatformPayPaymentMethod } = usePlatformPay();
   const [gpaySupported, setGpaySupported] = useState(false);
 
   useEffect(() => {
@@ -38,28 +38,14 @@ export default function PayScreen() {
   }, [id]);
 
   useEffect(() => {
-    const initializeGooglePay = async () => {
-      if (!(await isGooglePaySupported({ testEnv: true }))) {
-        return;
-      }
-      const { error } = await initGooglePay({
-        testEnv: true,
-        merchantName: 'Evidencija Računa',
-        countryCode: 'HR',
-        billingAddressConfig: {
-            format: 'MIN',
-            isPhoneNumberRequired: false,
-            isRequired: false,
-        },
-        existingPaymentMethodRequired: false,
-        isEmailRequired: false,
-      });
-      if (!error) {
+    const initializePlatformPay = async () => {
+      const supported = await isPlatformPaySupported({ googlePay: { testEnv: true } });
+      if (supported) {
         setGpaySupported(true);
       }
     };
     if (Platform.OS === 'android') {
-      initializeGooglePay();
+      initializePlatformPay();
     }
   }, []);
 
@@ -71,9 +57,14 @@ export default function PayScreen() {
   const payWithGooglePay = async () => {
     if (!bill) return;
     try {
-      const { error, paymentMethod } = await createGooglePayPaymentMethod({
-        amount: Math.round(bill.amount * 100), // amount in cents
-        currencyCode: 'EUR',
+      const { error, paymentMethod } = await createPlatformPayPaymentMethod({
+        googlePay: {
+          amount: bill.amount,
+          currencyCode: 'EUR',
+          testEnv: true,
+          merchantName: 'Evidencija Računa',
+          merchantCountryCode: 'HR',
+        }
       });
       
       if (error) {
@@ -169,8 +160,8 @@ export default function PayScreen() {
       </View>
 
       {gpaySupported && Platform.OS === 'android' ? (
-        <GooglePayButton
-          type="pay"
+        <PlatformPayButton
+          type={PlatformPay.ButtonType.Pay}
           onPress={payWithGooglePay}
           style={styles.googlePayButton}
         />
