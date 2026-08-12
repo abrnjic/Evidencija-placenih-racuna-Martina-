@@ -7,6 +7,7 @@ import { useColorScheme } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { PieChart, LineChart } from 'react-native-chart-kit';
+import * as Notifications from 'expo-notifications';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -176,6 +177,24 @@ export default function DashboardScreen() {
     }
   };
 
+  const handleTestNotification = async () => {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Nema dozvole', 'Morate omogućiti obavijesti u postavkama mobitela.');
+      return;
+    }
+    
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Testna Obavijest 🔔",
+        body: "Vaše obavijesti uspješno rade! Prava obavijest stići će 20. u mjesecu.",
+        sound: true,
+      },
+      trigger: null, // Send immediately
+    });
+    Alert.alert('Obavijest poslana!', 'Trebate dobiti obavijest svake sekunde.');
+  };
+
   const difference = totalThisMonth - totalLastMonth;
   const isHigher = difference > 0;
 
@@ -274,6 +293,14 @@ export default function DashboardScreen() {
             <Text style={styles.hintText}>
               Brzo kopirajte sve račune iz prošlog mjeseca, a zatim u Povijesti izmijenite samo iznose računa koji variraju (npr. struja).
             </Text>
+            
+            <TouchableOpacity 
+              style={[styles.duplicateButton, { backgroundColor: '#FF9500', marginTop: 16 }]}
+              onPress={handleTestNotification}
+            >
+              <MaterialIcons name="notifications-active" size={24} color="#fff" style={{marginRight: 8}} />
+              <Text style={styles.duplicateButtonText}>Testiraj Obavijest</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
