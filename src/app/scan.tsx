@@ -53,17 +53,25 @@ export default function ScanScreen() {
       const amount = (amountNum / 100).toFixed(2);
       
       // Index 6 is the Recipient Name (Ime primatelja)
-      const recipientName = parsedLines[6] ? parsedLines[6].toUpperCase() : '';
-      let category = null;
+      const recipientName = parsedLines[6] ? parsedLines[6].trim() : '';
+      // Index 13 is the Description (Opis plaćanja) which often contains due date
+      const description = parsedLines[13] ? parsedLines[13].trim() : '';
       
-      if (recipientName.includes('HEP') || recipientName.includes('ELEKTRA')) category = 'Struja';
-      else if (recipientName.includes('VODOOPSKRBA') || recipientName.includes('VODOVOD')) category = 'Voda';
-      else if (recipientName.includes('PLIN') || recipientName.includes('GRADSKA PLINARA')) category = 'Plin';
-      else if (recipientName.includes('ČISTOĆA') || recipientName.includes('CISTOCA') || recipientName.includes('SMEĆE')) category = 'Smeće';
-      else if (recipientName.includes('GSKG') || recipientName.includes('UPRAVITELJ') || recipientName.includes('PRIČUVA') || recipientName.includes('PRICUVA')) category = 'Pričuva';
-      else if (recipientName.includes('HT') || recipientName.includes('TELEKOM') || recipientName.includes('ISKON') || recipientName.includes('A1') || recipientName.includes('TELEMACH')) category = 'Mobitel'; // or Internet/TV, but we can't be sure
+      let noteText = '';
+      if (recipientName) noteText += `Izdavač: ${recipientName}`;
+      if (description) noteText += (noteText ? '\n' : '') + `Opis: ${description}`;
 
-      return { amount, category };
+      let category = null;
+      const upperRecipient = recipientName.toUpperCase();
+      
+      if (upperRecipient.includes('HEP') || upperRecipient.includes('ELEKTRA')) category = 'Struja';
+      else if (upperRecipient.includes('VODOOPSKRBA') || upperRecipient.includes('VODOVOD')) category = 'Voda';
+      else if (upperRecipient.includes('PLIN') || upperRecipient.includes('GRADSKA PLINARA')) category = 'Plin';
+      else if (upperRecipient.includes('ČISTOĆA') || upperRecipient.includes('CISTOCA') || upperRecipient.includes('SMEĆE') || upperRecipient.includes('SMECE')) category = 'Smeće';
+      else if (upperRecipient.includes('GSKG') || upperRecipient.includes('UPRAVITELJ') || upperRecipient.includes('PRIČUVA') || upperRecipient.includes('PRICUVA')) category = 'Pričuva';
+      else if (upperRecipient.includes('HT') || upperRecipient.includes('TELEKOM') || upperRecipient.includes('ISKON') || upperRecipient.includes('A1') || upperRecipient.includes('TELEMACH')) category = 'Mobitel';
+
+      return { amount, category, note: noteText };
     } catch (error) {
       console.error('Error parsing HUB3:', error);
       return null;
@@ -81,7 +89,8 @@ export default function ScanScreen() {
         pathname: '/add',
         params: { 
           scannedAmount: result.amount,
-          scannedCategory: result.category || ''
+          scannedCategory: result.category || '',
+          scannedNote: result.note || ''
         }
       });
     } else {
