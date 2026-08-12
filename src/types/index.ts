@@ -1,4 +1,4 @@
-export type Category = 'Struja' | 'Voda' | 'Plin' | 'Smeće' | 'Pričuva' | 'Internet/TV' | 'Mobitel' | 'Ostalo';
+export type Category = string;
 
 export interface Bill {
   id?: string;

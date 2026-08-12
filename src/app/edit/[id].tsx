@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { getBillById, updateBill } from '../../services/billService';
+import { getCategories, CustomCategory } from '../../services/categoryService';
 import { Category } from '../../types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from 'react-native';
 
-const CATEGORIES: Category[] = ['Struja', 'Voda', 'Plin', 'Smeće', 'Pričuva', 'Internet/TV', 'Mobitel', 'Ostalo'];
-
 export default function EditBillScreen() {
   const { id } = useLocalSearchParams();
-  const [category, setCategory] = useState<Category>('Struja');
+  const [categories, setCategories] = useState<CustomCategory[]>([]);
+  const [category, setCategory] = useState<Category>('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(true);
@@ -23,8 +23,11 @@ export default function EditBillScreen() {
   const styles = createStyles(colors);
 
   useEffect(() => {
-    const loadBill = async () => {
+    const fetchData = async () => {
       try {
+        const cats = await getCategories();
+        setCategories(cats);
+
         if (!id || typeof id !== 'string') return;
         const bill = await getBillById(id);
         if (bill) {
@@ -36,12 +39,12 @@ export default function EditBillScreen() {
           router.back();
         }
       } catch (error) {
-        Alert.alert('Greška', 'Problem sa učitavanjem računa.');
+        Alert.alert('Greška', 'Problem sa učitavanjem.');
       } finally {
         setLoading(false);
       }
     };
-    loadBill();
+    fetchData();
   }, [id]);
 
   const handleSave = async () => {
@@ -82,8 +85,8 @@ export default function EditBillScreen() {
           style={{ color: colors.text }}
           dropdownIconColor={colors.text}
         >
-          {CATEGORIES.map(cat => (
-            <Picker.Item key={cat} label={cat} value={cat} color={scheme === 'dark' ? '#fff' : '#000'} />
+          {categories.map(cat => (
+            <Picker.Item key={cat.id} label={cat.name} value={cat.name} color={scheme === 'dark' ? '#fff' : '#000'} />
           ))}
         </Picker>
       </View>

@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { addBill } from '../services/billService';
+import { getCategories, CustomCategory } from '../services/categoryService';
 import { Category } from '../types';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-const CATEGORIES: Category[] = ['Struja', 'Voda', 'Plin', 'Smeće', 'Pričuva', 'Internet/TV', 'Mobitel', 'Ostalo'];
-
 export default function AddBillScreen() {
-  const [category, setCategory] = useState<Category>('Struja');
+  const [categories, setCategories] = useState<CustomCategory[]>([]);
+  const [category, setCategory] = useState<Category>('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,16 +24,31 @@ export default function AddBillScreen() {
   const styles = createStyles(colors);
 
   useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const cats = await getCategories();
+        setCategories(cats);
+        if (cats.length > 0 && !category) {
+          setCategory(cats[0].name);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
     if (scannedAmount && typeof scannedAmount === 'string') {
       setAmount(scannedAmount);
     }
-    if (scannedCategory && typeof scannedCategory === 'string' && CATEGORIES.includes(scannedCategory as Category)) {
-      setCategory(scannedCategory as Category);
+    if (scannedCategory && typeof scannedCategory === 'string' && categories.some(c => c.name === scannedCategory)) {
+      setCategory(scannedCategory);
     }
     if (scannedNote && typeof scannedNote === 'string') {
       setNote(scannedNote);
     }
-  }, [scannedAmount, scannedCategory, scannedNote]);
+  }, [scannedAmount, scannedCategory, scannedNote, categories]);
 
   const handleSave = async () => {
     if (!amount || isNaN(Number(amount))) {
@@ -68,8 +83,8 @@ export default function AddBillScreen() {
           style={{ color: colors.text }}
           dropdownIconColor={colors.text}
         >
-          {CATEGORIES.map(cat => (
-            <Picker.Item key={cat} label={cat} value={cat} color={scheme === 'dark' ? '#fff' : '#000'} />
+          {categories.map(cat => (
+            <Picker.Item key={cat.id} label={cat.name} value={cat.name} color={scheme === 'dark' ? '#fff' : '#000'} />
           ))}
         </Picker>
       </View>

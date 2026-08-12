@@ -67,29 +67,51 @@ export default function TabLayout() {
         },
         headerTintColor: colors.text,
         tabBarStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: scheme === 'dark' ? '#1C1C1E' : '#F8F8F8',
+          borderTopColor: scheme === 'dark' ? '#38383A' : '#E5E5EA',
+          borderTopWidth: 1,
+          height: 65,
+          paddingBottom: 10,
+          paddingTop: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: scheme === 'dark' ? 0.3 : 0.1,
+          shadowRadius: 4,
+          elevation: 10,
         },
-        tabBarActiveTintColor: colors.text,
+        tabBarActiveTintColor: '#208AEF',
+        tabBarInactiveTintColor: scheme === 'dark' ? '#8E8E93' : '#999999',
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+        }
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color }) => <MaterialIcons name="dashboard" size={24} color={color} />,
+          tabBarIcon: ({ color }) => <MaterialIcons name="dashboard" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: 'Povijest',
-          tabBarIcon: ({ color }) => <MaterialIcons name="history" size={24} color={color} />,
+          tabBarIcon: ({ color }) => <MaterialIcons name="history" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
         name="add"
         options={{
           title: 'Novi Račun',
-          tabBarIcon: ({ color }) => <MaterialIcons name="add-circle" size={24} color={color} />,
+          tabBarIcon: ({ color }) => <MaterialIcons name="add-circle" size={26} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="categories"
+        options={{
+          title: 'Kategorije',
+          tabBarIcon: ({ color }) => <MaterialIcons name="category" size={26} color={color} />,
         }}
       />
       {/* We can hide other screens like explore if they exist, or just delete them */}
