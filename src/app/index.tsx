@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView, Dimensions } from 'react-native';
 import { getBills, addBill } from '../services/billService';
+import { getBudgets, Budget } from '../services/budgetService';
 import { Bill } from '../types';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from 'react-native';
@@ -25,6 +26,9 @@ export default function DashboardScreen() {
   const [duplicating, setDuplicating] = useState(false);
   const [pieData, setPieData] = useState<any[]>([]);
   const [lineData, setLineData] = useState<any>({ labels: [], datasets: [{ data: [] }] });
+  const [budgets, setBudgets] = useState<Record<string, Budget>>({});
+  const [categorySpending, setCategorySpending] = useState<Record<string, number>>({});
+  const [unpaidBills, setUnpaidBills] = useState<Bill[]>([]);
   const router = useRouter();
 
   const scheme = useColorScheme();
@@ -34,7 +38,7 @@ export default function DashboardScreen() {
   const calculateTotals = async () => {
     try {
       setLoading(true);
-      const bills = await getBills();
+      const [bills, currentBudgets] = await Promise.all([getBills(), getBudgets()]);
       
       const now = new Date();
       const currentMonth = now.getMonth();
@@ -49,6 +53,7 @@ export default function DashboardScreen() {
       let lastTotal = 0;
       let currentMonthCount = 0;
       const lastMonthBillsArray: Bill[] = [];
+      const upcomingUnpaid: Bill[] = [];
       
       // For Pie Chart (current month categories)
       const categoryTotals: Record<string, number> = {};
@@ -64,6 +69,11 @@ export default function DashboardScreen() {
       }
 
       bills.forEach(bill => {
+        // Collect unpaid bills
+        if (bill.isPaid === false) {
+          upcomingUnpaid.push(bill);
+        }
+
         const billDate = new Date(bill.datePaid);
         const billMonth = billDate.getMonth();
         const billYear = billDate.getFullYear();
@@ -110,6 +120,9 @@ export default function DashboardScreen() {
       setLastMonthBills(lastMonthBillsArray);
       setThisMonthBillsCount(currentMonthCount);
       setPieData(newPieData);
+      setBudgets(currentBudgets);
+      setCategorySpending(categoryTotals);
+      setUnpaidBills(upcomingUnpaid);
       
       if (lineValues.length > 0 && lineValues.some(v => v > 0)) {
         setLineData({
@@ -119,7 +132,6 @@ export default function DashboardScreen() {
       } else {
         setLineData(null);
       }
-      
     } catch (error) {
       console.error(error);
     } finally {
@@ -135,14 +147,14 @@ export default function DashboardScreen() {
 
   const handleDuplicate = () => {
     if (lastMonthBills.length === 0) {
-      Alert.alert('Nema računa', 'Prošli mjesec nemate plaćenih računa za kopiranje.');
+      Alert.alert('Obavijest', 'Nema računa iz prošlog mjeseca za kopiranje.');
       return;
     }
     
     if (thisMonthBillsCount > 0) {
       Alert.alert(
         'Upozorenje',
-        'Već imate unesene račune za ovaj mjesec. Želite li svejedno iskopirati prošlomjesečne račune i potencijalno ih duplicirati?',
+        'Već imate unesene račune u ovom mjesecu. Želite li svejedno kopirati prošli mjesec i riskirati duple račune?',
         [
           { text: 'Odustani', style: 'cancel' },
           { text: 'Kopiraj svejedno', onPress: performDuplication }
@@ -163,6 +175,8 @@ export default function DashboardScreen() {
           category: bill.category,
           amount: bill.amount, // copy exact amount, user can edit later
           datePaid: now.toISOString(),
+          dueDate: bill.dueDate ? new Date(new Date(bill.dueDate).setMonth(new Date(bill.dueDate).getMonth() + 1)).toISOString() : undefined,
+          isPaid: false,
           note: bill.note ? `(Kopirano) ${bill.note}` : '(Kopirano)'
         });
       });
@@ -195,6 +209,11 @@ export default function DashboardScreen() {
     Alert.alert('Obavijest poslana!', 'Trebate dobiti obavijest svake sekunde.');
   };
 
+  const handlePay = (id: string | undefined) => {
+    if (!id) return;
+    router.push(`/pay?id=${id}`);
+  };
+
   const difference = totalThisMonth - totalLastMonth;
   const isHigher = difference > 0;
 
@@ -205,6 +224,28 @@ export default function DashboardScreen() {
       ) : (
         <View style={styles.content}>
           <Text style={styles.headerTitle}>Pregled troškova</Text>
+          
+          {unpaidBills.length > 0 && (
+            <View style={styles.unpaidSection}>
+              <Text style={styles.unpaidTitle}>Neplaćeni računi ({unpaidBills.length})</Text>
+              {unpaidBills.map((bill) => (
+                <View key={bill.id} style={styles.unpaidCard}>
+                  <View style={styles.unpaidInfo}>
+                    <Text style={styles.unpaidCategory}>{bill.category}</Text>
+                    <Text style={styles.unpaidAmount}>{bill.amount.toFixed(2)} €</Text>
+                    {bill.dueDate && (
+                      <Text style={styles.unpaidDueDate}>
+                        Rok: {new Date(bill.dueDate).toLocaleDateString('hr-HR')}
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity style={styles.payButton} onPress={() => handlePay(bill.id)}>
+                    <Text style={styles.payButtonText}>PLATI</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
           
           <View style={styles.mainCard}>
             <Text style={styles.cardLabel}>Ovaj mjesec</Text>
@@ -223,6 +264,36 @@ export default function DashboardScreen() {
               <Text style={styles.statAmount}>{totalLastMonth.toFixed(2)} €</Text>
             </View>
           </View>
+          
+          {Object.keys(budgets).length > 0 && (
+            <View style={styles.chartContainer}>
+              <Text style={styles.chartTitle}>Budžeti</Text>
+              {Object.values(budgets).map(budget => {
+                const spent = categorySpending[budget.categoryName] || 0;
+                const progress = Math.min(spent / budget.limit, 1);
+                const isOverBudget = spent > budget.limit;
+                
+                return (
+                  <View key={budget.categoryId} style={styles.budgetProgressContainer}>
+                    <View style={styles.budgetProgressHeader}>
+                      <Text style={styles.budgetCategoryName}>{budget.categoryName}</Text>
+                      <Text style={[styles.budgetAmountText, isOverBudget && { color: '#FF3B30' }]}>
+                        {spent.toFixed(2)} € / {budget.limit.toFixed(2)} €
+                      </Text>
+                    </View>
+                    <View style={styles.progressBarBackground}>
+                      <View 
+                        style={[
+                          styles.progressBarFill, 
+                          { width: `${progress * 100}%`, backgroundColor: isOverBudget ? '#FF3B30' : '#34C759' }
+                        ]} 
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
           
           {pieData.length > 0 && (
             <View style={styles.chartContainer}>
@@ -440,5 +511,94 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginTop: 12,
     lineHeight: 18,
     paddingHorizontal: 10,
+  },
+  budgetProgressContainer: {
+    marginBottom: 16,
+  },
+  budgetProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  budgetCategoryName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  budgetAmountText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+  },
+  progressBarBackground: {
+    height: 8,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  unpaidSection: {
+    marginBottom: 20,
+  },
+  unpaidTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FF3B30',
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+  unpaidCard: {
+    backgroundColor: colors.backgroundElement,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF3B30',
+  },
+  unpaidInfo: {
+    flex: 1,
+  },
+  unpaidCategory: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  unpaidAmount: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  unpaidDueDate: {
+    color: '#FF3B30',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  payButton: {
+    backgroundColor: '#34C759',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  payButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
   }
 });

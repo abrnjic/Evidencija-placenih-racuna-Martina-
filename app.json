@@ -44,7 +44,9 @@
           "cameraPermission": "Allow Evidencija Računa to access your camera."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "@react-native-community/datetimepicker",
+      "@stripe/stripe-react-native"
     ],
     "experiments": {
       "typedRoutes": true,

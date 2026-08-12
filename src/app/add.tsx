@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { addBill } from '../services/billService';
 import { getCategories, CustomCategory } from '../services/categoryService';
@@ -8,15 +8,20 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function AddBillScreen() {
   const [categories, setCategories] = useState<CustomCategory[]>([]);
   const [category, setCategory] = useState<Category>('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [dueDate, setDueDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [reminderPreference, setReminderPreference] = useState(24);
   const [loading, setLoading] = useState(false);
+  
   const router = useRouter();
-  const { scannedAmount, scannedCategory, scannedNote } = useLocalSearchParams();
+  const { scannedAmount, scannedCategory, scannedNote, scannedDueDate, scannedIban, scannedModel, scannedPozivNaBroj } = useLocalSearchParams();
   
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
@@ -48,7 +53,20 @@ export default function AddBillScreen() {
     if (scannedNote && typeof scannedNote === 'string') {
       setNote(scannedNote);
     }
-  }, [scannedAmount, scannedCategory, scannedNote, categories]);
+    if (scannedDueDate && typeof scannedDueDate === 'string') {
+      const parsedDate = new Date(scannedDueDate);
+      if (!isNaN(parsedDate.getTime())) {
+        setDueDate(parsedDate);
+      }
+    }
+  }, [scannedAmount, scannedCategory, scannedNote, scannedDueDate, categories]);
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setDueDate(selectedDate);
+    }
+  };
 
   const handleSave = async () => {
     if (!amount || isNaN(Number(amount))) {
@@ -61,9 +79,16 @@ export default function AddBillScreen() {
       await addBill({
         category,
         amount: Number(amount),
-        datePaid: new Date().toISOString(),
-        note
+        datePaid: new Date().toISOString(), // Created date
+        dueDate: dueDate.toISOString(),
+        isPaid: false,
+        reminderPreference,
+        note,
+        iban: typeof scannedIban === 'string' ? scannedIban : undefined,
+        model: typeof scannedModel === 'string' ? scannedModel : undefined,
+        pozivNaBroj: typeof scannedPozivNaBroj === 'string' ? scannedPozivNaBroj : undefined
       });
+      // Future TODO: Schedule notification here based on reminderPreference
       Alert.alert('Uspješno', 'Račun je uspješno dodan!');
       router.push('/history');
     } catch (error) {
@@ -74,7 +99,7 @@ export default function AddBillScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <Text style={styles.label}>Kategorija</Text>
       <View style={styles.pickerContainer}>
         <Picker
@@ -107,6 +132,41 @@ export default function AddBillScreen() {
         </TouchableOpacity>
       </View>
 
+      <Text style={styles.label}>Dospijeće plaćanja</Text>
+      <TouchableOpacity 
+        style={styles.dateButton} 
+        onPress={() => setShowDatePicker(true)}
+      >
+        <MaterialIcons name="event" size={24} color={colors.text} style={{marginRight: 8}} />
+        <Text style={{color: colors.text, fontSize: 16}}>
+          {dueDate.toLocaleDateString('hr-HR')}
+        </Text>
+      </TouchableOpacity>
+      
+      {showDatePicker && (
+        <DateTimePicker
+          value={dueDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
+
+      <Text style={styles.label}>Podsjeti me prije isteka roka</Text>
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={reminderPreference}
+          onValueChange={(itemValue) => setReminderPreference(itemValue as number)}
+          style={{ color: colors.text }}
+          dropdownIconColor={colors.text}
+        >
+          <Picker.Item label="24 sata prije" value={24} color={scheme === 'dark' ? '#fff' : '#000'} />
+          <Picker.Item label="12 sati prije" value={12} color={scheme === 'dark' ? '#fff' : '#000'} />
+          <Picker.Item label="8 sati prije" value={8} color={scheme === 'dark' ? '#fff' : '#000'} />
+          <Picker.Item label="4 sata prije" value={4} color={scheme === 'dark' ? '#fff' : '#000'} />
+        </Picker>
+      </View>
+
       <Text style={styles.label}>Napomena (opcionalno)</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -129,7 +189,7 @@ export default function AddBillScreen() {
           <Text style={styles.buttonText}>Spremi Račun</Text>
         )}
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -152,6 +212,15 @@ const createStyles = (colors: any) => StyleSheet.create({
     padding: 16,
     fontSize: 16,
     color: colors.text,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundElement,
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
   },

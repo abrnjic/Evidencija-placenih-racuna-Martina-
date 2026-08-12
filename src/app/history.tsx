@@ -10,6 +10,7 @@ import { useColorScheme } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import Animated, { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
 
 export default function HistoryScreen() {
   const [bills, setBills] = useState<Bill[]>([]);
@@ -119,20 +120,47 @@ export default function HistoryScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: Bill }) => (
-    <View style={styles.card}>
+  const handlePay = (id: string | undefined) => {
+    if (!id) return;
+    router.push(`/pay?id=${id}`);
+  };
+
+  const renderItem = ({ item, index }: { item: Bill, index: number }) => (
+    <Animated.View 
+      entering={FadeIn.delay(index * 100)} 
+      exiting={FadeOut}
+      layout={Layout.springify()}
+      style={styles.card}
+    >
+      {item.isPaid && (
+        <View style={styles.stampContainer}>
+          <Text style={styles.stampText}>PLAĆENO</Text>
+        </View>
+      )}
       <View style={styles.cardHeader}>
         <View style={styles.categoryBadge}>
           <Text style={styles.categoryText}>{item.category}</Text>
         </View>
-        <Text style={styles.dateText}>
-          {format(new Date(item.datePaid), 'dd. MMM yyyy.', { locale: hr })}
-        </Text>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={styles.dateText}>
+            Ubačeno: {format(new Date(item.datePaid), 'dd. MMM yyyy.', { locale: hr })}
+          </Text>
+          {item.dueDate && (
+            <Text style={[styles.dateText, { color: item.isPaid ? '#34C759' : '#FF3B30', fontWeight: 'bold' }]}>
+              Rok: {format(new Date(item.dueDate), 'dd. MMM yyyy.', { locale: hr })}
+            </Text>
+          )}
+        </View>
       </View>
       
       <View style={styles.cardBody}>
         <Text style={styles.amountText}>{item.amount.toFixed(2)} €</Text>
         <View style={styles.actionsContainer}>
+          {!item.isPaid && (
+            <TouchableOpacity onPress={() => handlePay(item.id)} style={styles.payButton}>
+              <Text style={styles.payButtonText}>PLATI</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity 
             onPress={() => router.push(`/edit/${item.id}`)} 
             style={styles.actionButton}
@@ -148,7 +176,7 @@ export default function HistoryScreen() {
       {item.note ? (
         <Text style={styles.noteText}>{item.note}</Text>
       ) : null}
-    </View>
+    </Animated.View>
   );
 
   return (
@@ -240,6 +268,26 @@ const createStyles = (colors: any) => StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+    overflow: 'hidden',
+  },
+  stampContainer: {
+    position: 'absolute',
+    top: 30,
+    right: 20,
+    transform: [{ rotate: '-15deg' }],
+    borderWidth: 3,
+    borderColor: 'rgba(52, 199, 89, 0.3)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    zIndex: 10,
+    backgroundColor: 'rgba(52, 199, 89, 0.05)',
+  },
+  stampText: {
+    color: 'rgba(52, 199, 89, 0.4)',
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 4,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -281,6 +329,17 @@ const createStyles = (colors: any) => StyleSheet.create({
   actionButton: {
     padding: 8,
     marginLeft: 8,
+  },
+  payButton: {
+    backgroundColor: '#34C759',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginLeft: 8,
+  },
+  payButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   noteText: {
     marginTop: 12,
