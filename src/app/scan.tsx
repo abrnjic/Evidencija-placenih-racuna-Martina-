@@ -8,6 +8,7 @@ import { useColorScheme } from 'react-native';
 import { scanReceiptWithAI } from '../services/geminiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { BarCodeScanner } from 'expo-barcode-scanner';
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -86,17 +87,54 @@ export default function ScanScreen() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.5,
+        allowsEditing: false, // Ne rezati jer to može oštetiti kod
+        quality: 1.0,
         base64: true,
       });
 
-      if (!result.canceled && result.assets[0].base64) {
+      if (!result.canceled && result.assets[0].uri) {
         setScanned(true);
-        await processImageWithAI(result.assets[0].base64);
+        setProcessingAI(true);
+        
+        try {
+          // 1. Pokušaj pročitati 2D barkod lokalno sa slike
+          const scannedResults = await BarCodeScanner.scanFromURLAsync(result.assets[0].uri, [BarCodeScanner.Constants.BarCodeType.pdf417, BarCodeScanner.Constants.BarCodeType.qr]);
+          
+          if (scannedResults && scannedResults.length > 0) {
+            const data = scannedResults[0].data;
+            const parsed = parseHUB3(data);
+            
+            if (parsed) {
+              setProcessingAI(false);
+              setScanned(false);
+              router.replace({
+                pathname: '/add',
+                params: {
+                  scannedAmount: parsed.amount,
+                  scannedCategory: parsed.category || '',
+                  scannedNote: parsed.note || '',
+                  scannedIban: parsed.iban,
+                  scannedModel: parsed.model,
+                  scannedPozivNaBroj: parsed.pozivNaBroj,
+                }
+              });
+              return;
+            }
+          }
+        } catch (e) {
+          console.log("Local barcode scan failed or no barcode found, falling back to AI...", e);
+        }
+
+        // 2. Ako nema barkoda ili nije uspjelo, prebaci se na AI za obično čitanje teksta s računa
+        setProcessingAI(false); // processImageWithAI will set it to true again
+        if (result.assets[0].base64) {
+          await processImageWithAI(result.assets[0].base64);
+        }
       }
     } catch (error) {
       console.error("Gallery Error:", error);
+      setProcessingAI(false);
+      setScanned(false);
     }
   };
 
