@@ -6,7 +6,6 @@ import { getBillById, updateBill } from '../services/billService';
 import { Bill } from '../types';
 import { Colors } from '../constants/theme';
 import * as Clipboard from 'expo-clipboard';
-import { usePlatformPay, PlatformPayButton, PlatformPay } from '@stripe/stripe-react-native';
 
 export default function PayScreen() {
   const { id } = useLocalSearchParams();
@@ -17,9 +16,6 @@ export default function PayScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
   const styles = createStyles(colors);
-
-  const { isPlatformPaySupported, createPlatformPayPaymentMethod } = usePlatformPay();
-  const [gpaySupported, setGpaySupported] = useState(false);
 
   useEffect(() => {
     const fetchBill = async () => {
@@ -37,47 +33,9 @@ export default function PayScreen() {
     fetchBill();
   }, [id]);
 
-  useEffect(() => {
-    const initializePlatformPay = async () => {
-      const supported = await isPlatformPaySupported({ googlePay: { testEnv: true } });
-      if (supported) {
-        setGpaySupported(true);
-      }
-    };
-    if (Platform.OS === 'android') {
-      initializePlatformPay();
-    }
-  }, []);
-
   const copyToClipboard = async (text: string, type: string) => {
     await Clipboard.setStringAsync(text);
     Alert.alert('Kopirano!', `${type} je kopiran u međuspremnik.`);
-  };
-
-  const payWithGooglePay = async () => {
-    if (!bill) return;
-    try {
-      const { error, paymentMethod } = await createPlatformPayPaymentMethod({
-        googlePay: {
-          amount: bill.amount,
-          currencyCode: 'EUR',
-          testEnv: true,
-          merchantName: 'Evidencija Računa',
-          merchantCountryCode: 'HR',
-        }
-      });
-      
-      if (error) {
-        Alert.alert('Plaćanje prekinuto', error.message);
-        return;
-      }
-      
-      // If success, we pretend we charged them (we got the token)
-      markAsPaid();
-    } catch (e) {
-      console.log(e);
-      Alert.alert('Greška', 'Nije moguće pokrenuti Google Pay.');
-    }
   };
 
   const markAsPaid = async () => {
@@ -159,17 +117,9 @@ export default function PayScreen() {
         </View>
       </View>
 
-      {gpaySupported && Platform.OS === 'android' ? (
-        <PlatformPayButton
-          type={PlatformPay.ButtonType.Pay}
-          onPress={payWithGooglePay}
-          style={styles.googlePayButton}
-        />
-      ) : null}
-
       <TouchableOpacity style={styles.confirmButton} onPress={markAsPaid}>
         <MaterialIcons name="check-circle" size={24} color="#fff" style={{marginRight: 8}} />
-        <Text style={styles.confirmButtonText}>Potvrdi da je plaćeno (Ručno)</Text>
+        <Text style={styles.confirmButtonText}>Potvrdi da je plaćeno</Text>
       </TouchableOpacity>
     </ScrollView>
   );

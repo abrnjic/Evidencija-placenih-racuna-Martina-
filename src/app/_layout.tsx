@@ -20,7 +20,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-import { StripeProvider } from '@stripe/stripe-react-native';
 
 export default function TabLayout() {
   const scheme = useColorScheme();
@@ -99,9 +98,6 @@ export default function TabLayout() {
   }
 
   return (
-    <StripeProvider
-      publishableKey="pk_test_TYooMQauvdEDq54NiTphI7jx" // Ovo je testni Stripe ključ
-    >
       <Tabs
         screenOptions={{
           headerStyle: {
@@ -177,6 +173,5 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-    </StripeProvider>
   );
 }

@@ -45,14 +45,7 @@
         }
       ],
       "expo-sharing",
-      "@react-native-community/datetimepicker",
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.com.evidencijaracuna",
-          "enableGooglePay": true
-        }
-      ]
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
