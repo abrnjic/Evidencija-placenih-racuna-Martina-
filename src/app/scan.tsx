@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions, scanFromURLAsync } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
@@ -8,7 +8,6 @@ import { useColorScheme } from 'react-native';
 import { scanReceiptWithAI } from '../services/geminiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { BarCodeScanner } from 'expo-barcode-scanner';
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -98,7 +97,7 @@ export default function ScanScreen() {
         
         try {
           // 1. Pokušaj pročitati 2D barkod lokalno sa slike
-          const scannedResults = await BarCodeScanner.scanFromURLAsync(result.assets[0].uri, [BarCodeScanner.Constants.BarCodeType.pdf417, BarCodeScanner.Constants.BarCodeType.qr]);
+          const scannedResults = await scanFromURLAsync(result.assets[0].uri, ['pdf417', 'qr']);
           
           if (scannedResults && scannedResults.length > 0) {
             const data = scannedResults[0].data;
