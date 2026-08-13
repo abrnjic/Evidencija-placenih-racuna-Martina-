@@ -35,7 +35,9 @@ jobs:
 
       - name: Build APK (Release)
         working-directory: ./android
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --no-daemon --max-workers=2
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError"
 
       - name: Get current date for tag
         id: date
